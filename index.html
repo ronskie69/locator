@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Location Detection</title>
+    <!-- Include Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        /* Style for the map container */
+        #map {
+            height: 300px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Location Detection</h1>
+    <div id="location-info"></div>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        let map, marker;
+
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(showPosition, showError);
+            } else {
+                document.getElementById("location-info").innerHTML = "Geolocation is not supported by this browser.";
+            }
+        }
+
+        function showPosition(position) {
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+
+            document.getElementById("location-info").innerHTML = `Latitude: ${latitude}, Longitude: ${longitude}`;
+
+            reverseGeocode(latitude, longitude);
+
+            if (!map) {
+                map = L.map('map').setView([latitude, longitude], 17); // Adjust zoom level
+                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    attribution: '&copy; Esri'
+                }).addTo(map);
+                marker = L.marker([latitude, longitude]).addTo(map)
+                    .bindPopup('Your Location')
+                    .openPopup();
+            } else {
+                marker.setLatLng([latitude, longitude]).update();
+            }
+        }
+
+        function showError(error) {
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    document.getElementById("location-info").innerHTML = "User denied the request for Geolocation.";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    document.getElementById("location-info").innerHTML = "Location information is unavailable.";
+                    break;
+                case error.TIMEOUT:
+                    document.getElementById("location-info").innerHTML = "The request to get user location timed out.";
+                    break;
+                case error.UNKNOWN_ERROR:
+                    document.getElementById("location-info").innerHTML = "An unknown error occurred.";
+                    break;
+            }
+        }
+
+        function reverseGeocode(latitude, longitude) {
+            fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`)
+                .then(response => response.json())
+                .then(data => {
+                    const address = data.display_name;
+                    document.getElementById("location-info").innerHTML += `<br>Location: ${address}`;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById("location-info").innerHTML += `<br>Error occurred while fetching location data.`;
+                });
+        }
+        getLocation();
+    </script>
+</body>
+</html>
